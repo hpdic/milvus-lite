@@ -170,7 +170,7 @@ find_package(prometheus-cpp REQUIRED)
 include_directories(${prometheus-cpp_INCLUDE_DIRS})
 
 if(NOT USE_SYSTEM_DEPS)
-  include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+	#  include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 endif()
 
 FetchContent_Declare(

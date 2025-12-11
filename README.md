@@ -1,3 +1,131 @@
+# HPDIC MOD
+
+```bash
+# 安装 SQLite3 and SQLiteCpp
+cd
+sudo apt install libsqlite3-dev -y
+git clone https://github.com/SRombauts/SQLiteCpp.git
+cd SQLiteCpp
+mkdir build
+cd build
+# -DSQLITECPP_INTERNAL_SQLITE=OFF 表示使用系统刚才装的 libsqlite3
+cmake -DSQLITECPP_INTERNAL_SQLITE=OFF ..
+sudo make install
+
+# 安装 other dependencies
+cd
+sudo apt install -y libantlr4-runtime-dev
+sudo apt install -y protobuf-compiler libprotobuf-dev libgrpc++-dev protobuf-compiler-grpc
+sudo apt install -y libtbb-dev
+sudo apt install nlohmann-json3-dev
+sudo apt install -y libboost-all-dev
+sudo apt install -y libgflags-dev libgoogle-glog-dev libopenblas-dev libfmt-dev libzstd-dev libssl-dev
+sudo apt install -y libxsimd-dev libmarisa-dev libopenblas-dev libgtest-dev
+sudo apt install -y libyaml-cpp-dev
+sudo apt install rapidjson-dev
+sudo apt install -y libroaring-dev
+sudo apt install libcurl4-openssl-dev
+
+# 安装 libevent
+cd ~
+git clone https://github.com/libevent/libevent.git
+cd libevent
+git checkout release-2.1.12-stable
+mkdir build && cd build
+cmake .. 
+make -j$(nproc)
+sudo make install
+
+# 安装 folly
+sudo apt install -y \
+    libdouble-conversion-dev \
+    libgoogle-glog-dev \
+    libgflags-dev \
+    libfmt-dev \
+    libboost-all-dev \
+    libevent-dev \
+    libiberty-dev \
+    liblz4-dev \
+    liblzma-dev \
+    libsnappy-dev \
+    make \
+    zlib1g-dev \
+    binutils-dev \
+    libjemalloc-dev \
+    libssl-dev \
+    pkg-config \
+    libunwind-dev
+cd ~
+git clone https://github.com/facebook/folly.git
+cd folly
+git checkout v2024.01.01.00
+mkdir _build && cd _build
+# -DFOLLY_USE_JEMALLOC=OFF: 有时候 jemalloc 会导致链接错误，关掉比较稳
+# -DCMAKE_POSITION_INDEPENDENT_CODE=ON: 必须开，否则后面链接动态库会报错
+cmake .. -DCMAKE_CXX_STANDARD=17 -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DFOLLY_USE_JEMALLOC=OFF
+make -j$(nproc)
+sudo make install
+
+# 安装 Apache Arrow C++库
+cd ~
+git clone https://github.com/apache/arrow.git
+cd arrow
+git checkout apache-arrow-15.0.0  # 选一个较新的稳定版，Milvus通常兼容12.0+
+cd cpp
+mkdir build && cd build
+cmake .. \
+  -DARROW_PARQUET=ON \
+  -DARROW_COMPUTE=ON \
+  -DARROW_CSV=ON \
+  -DARROW_FILESYSTEM=ON \
+  -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
+sudo make install
+
+# 安装 Prometheus C++库
+cd ~
+git clone --recursive https://github.com/jupp0r/prometheus-cpp.git
+cd prometheus-cpp
+mkdir _build && cd _build
+# -DENABLE_PUSH=OFF: Milvus Lite 通常只需要 Pull 模式，关掉 Push 可以少依赖一个 curl
+# -DENABLE_TESTING=OFF: 关掉测试省时间
+cmake .. -DENABLE_TESTING=OFF
+make -j$(nproc)
+sudo make install
+
+# 安装 marisa-trie
+cd ~
+git clone https://github.com/s-yata/marisa-trie.git
+cd marisa-trie
+mkdir build && cd build
+cmake .. 
+make -j$(nproc)
+sudo make install
+sudo mkdir -p /usr/local/lib/cmake/marisa
+sudo vim /usr/local/lib/cmake/marisa/marisa-config.cmake
+# 在文件中添加以下内容
+# Minimal marisa config
+set(MARISA_INCLUDE_DIRS "/usr/local/include")
+set(MARISA_LIBRARIES "/usr/local/lib/libmarisa.a")
+set(marisa_FOUND TRUE)
+add_library(marisa::marisa STATIC IMPORTED)
+set_target_properties(marisa::marisa PROPERTIES
+    IMPORTED_LOCATION "${MARISA_LIBRARIES}"
+    INTERFACE_INCLUDE_DIRECTORIES "${MARISA_INCLUDE_DIRS}"
+)
+
+# 编译 milvus-lite
+cd
+sudo apt install cmake -y
+cd ~/milvus-lite
+git submodule update --init --recursive
+mkdir build && cd build
+cmake .. -DBUILD_TESTING=OFF
+make -j$(nproc)
+sudo make install
+```
+---
+
 <div align="center">
     <img src="https://raw.githubusercontent.com/milvus-io/milvus-lite/refs/heads/main/milvus_lite_logo.png#gh-light-mode-only" width="60%"/>
 </div>

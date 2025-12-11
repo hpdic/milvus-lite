@@ -12,6 +12,46 @@
 # License for the specific language governing permissions and limitations under
 # the License
 
+# --- 开始补丁 ---
+find_package(Protobuf REQUIRED)
+
+if(NOT TARGET protobuf::protobuf)
+    if(TARGET protobuf::libprotobuf)
+        add_library(protobuf::protobuf ALIAS protobuf::libprotobuf)
+    else()
+        # 最后的兜底：如果连 target 都没有，就用变量手动创建
+        add_library(protobuf::protobuf UNKNOWN IMPORTED)
+        set_target_properties(protobuf::protobuf PROPERTIES
+            IMPORTED_LOCATION "${Protobuf_LIBRARY}"
+            INTERFACE_INCLUDE_DIRECTORIES "${Protobuf_INCLUDE_DIR}"
+        )
+    endif()
+endif()
+# --- 结束补丁 ---
+
+# --- ARROW PATCH START ---
+find_package(Arrow REQUIRED)
+
+if(NOT TARGET arrow::arrow)
+    # 尝试找标准名 Arrow::arrow_shared
+    if(TARGET Arrow::arrow_shared)
+        add_library(arrow::arrow ALIAS Arrow::arrow_shared)
+    # 尝试找旧版名字 arrow_shared
+    elseif(TARGET arrow_shared)
+        add_library(arrow::arrow ALIAS arrow_shared)
+    else()
+        # 最后的保底：手动指向文件
+        add_library(arrow::arrow UNKNOWN IMPORTED)
+        # 注意：这里假设 FindArrow 模块填充了 ARROW_SHARED_LIB 变量
+        # 如果报错，可以尝试把下一行改成具体路径 /usr/local/lib/libarrow.so
+        set_target_properties(arrow::arrow PROPERTIES
+            IMPORTED_LOCATION "${ARROW_SHARED_LIB}"
+            INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
+        )
+    endif()
+endif()
+# --- ARROW PATCH END ---
+
 include_directories(${CMAKE_CURRENT_LIST_DIR})
 add_library(milite ${LITE_BUILD_TYPE}
   ${CMAKE_CURRENT_LIST_DIR}/storage/collection_meta.cpp
