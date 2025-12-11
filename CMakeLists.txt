@@ -15,6 +15,10 @@
 cmake_minimum_required(VERSION 3.20)
 project(milvus-lite)
 
+# --- 强制添加 build/pb/src 目录为头文件搜索路径 ---
+# 这能解决所有 #include "pb/..." 找不到的问题
+include_directories(SYSTEM BEFORE ${CMAKE_BINARY_DIR}/pb/src)
+
 option(ENABLE_UNIT_TESTS "Enable unit tests" ON)
 message(STATUS "Enable testing: ${ENABLE_UNIT_TESTS}")
 option(USE_SYSTEM_DEPS "Build with system dependencies rather than Conan" OFF)
@@ -99,6 +103,27 @@ else()
   set(PROTOBUF_LIBRARIES protobuf::protobuf)
   include_directories(${protobuf_INCLUDE_DIRS})
 endif()
+
+# --- 强制设置 PROTOC 的路径参数，阻止它添加完整的相对路径 ---
+
+# 1. 找到 Protobuf 宏设置的位置 (通常在头文件包含之前)
+# 2. 尝试设置 PROTO_PATH 变量 (这是最常见的方法)
+set(PROTO_PATH "/home/cc/milvus-lite") # 确保这个路径正确
+
+# 3. 在所有 Protobuf 文件生成的地方，尝试添加 PROTOC_ARGS
+
+# 由于 Milvus 的 Protobuf 宏非常复杂且嵌套，我们尝试在顶层强制添加编译标志：
+set_property(GLOBAL APPEND PROPERTY
+    CMAKE_CXX_FLAGS
+    "-D_SILENCE_FP_CC_MESSAGE -Wno-int-in-bool-context -Wno-redeclared-class-member -Wno-unknown-attributes -Wno-deprecated-declarations"
+)
+
+# 强制设置 Protobuf 编译的根路径，让变量名不带相对路径
+set(PROTOBUF_PROTOC_EXECUTABLE "protoc")
+set(PROTOBUF_IMPORT_DIRS "/home/cc/milvus-lite") # 假设你的 .proto 文件都在这个根目录相对路径下
+
+# 查找所有调用 protobuf_generate_cpp 的地方，并在其前面添加这些设置。
+# 由于直接修改困难，我们再试一次最直接的清理
 
 find_package(TBB REQUIRED)
 include_directories(${TBB_tbb_INCLUDE_DIRS})
